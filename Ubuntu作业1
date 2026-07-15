@@ -1,0 +1,4 @@
+ls -alt
+mkdir -p src/com/example/utils
+cp --preserve=all /var/log/syslog ./system.log
+find /home/user -name "*.log" -size +10M -mtime -7 > large_logs.txt
