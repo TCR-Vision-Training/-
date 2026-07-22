@@ -1,0 +1,15 @@
+ps aux | grep python | grep -v grep
+systemd-run --scope -p CPUQuota=50% -p MemoryMax=512M --pid=1234
+
+[Unit]
+Description=Python Server
+After=network.target
+
+[Service]
+User=user
+ExecStart=/usr/bin/python3 /home/user/app/server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
