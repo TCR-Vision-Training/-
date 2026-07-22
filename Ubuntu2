@@ -1,0 +1,9 @@
+chown root /home/user/script.sh
+chgrp developers /home/user/script.sh
+
+chmod 754 /home/user/script.sh
+chmod u=rwx,g=rx,o=r /home/user/script.sh
+
+chmod -R 755 /home/user/data
+chgrp developers /home/user/data
+chmod g+s /home/user/data
