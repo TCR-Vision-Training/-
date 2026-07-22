@@ -1,0 +1,19 @@
+awk '$5 == 404 {count++} END {print count}' /var/log/nginx/access.log
+awk '$4 == "/api/v1/login" {print $1}' /var/log/nginx/access.log | sort -u > login_ips.txt
+awk '{print $1}' /var/log/nginx/access.log | sort | uniq -c | sort -nr | head -10
+awk '
+BEGIN{
+    m["Jan"]="01";m["Feb"]="02";m["Mar"]="03";m["Apr"]="04";m["May"]="05";m["Jun"]="06";
+    m["Jul"]="07";m["Aug"]="08";m["Sep"]="09";m["Oct"]="10";m["Nov"]="11";m["Dec"]="12";
+}
+$5 == 500 {
+    t=$2
+    sub(/^\[/,"",t);sub(/ \+0800\]$/,"",t)
+    split(t,arr,"/")
+    day=arr[1];mon=m[arr[2]];year_time=arr[3]
+    split(year_time,yt,":")
+    year=yt[1];hour=yt[2];min=yt[3];sec=yt[4]
+    newtime=year"-"mon"-"day" "hour":"min":"sec
+    $2=newtime
+    print $0
+}' access.log > errors_formatted.log
