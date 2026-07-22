@@ -1,0 +1,3 @@
+ip addr
+ss -nt state ESTABLISHED | awk '{print $5}' | awk -F: '{print $1}' | sort | uniq -c | sort -nr
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer token123" -d '{"name":"test","value":123}' http://localhost:8080/api
