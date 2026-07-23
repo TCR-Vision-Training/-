@@ -1,0 +1,11 @@
+0 3 * * * /home/user/scripts/backup.sh >> /var/log/backup.log 2>&1
+
+#!/bin/bash
+if ! pgrep -x nginx > /dev/null
+then
+    systemctl start nginx
+fi
+*/5 * * * * /home/user/check_nginx.sh
+
+crontab -l
+crontab -l | grep -v 'old_task' | crontab -
