@@ -1,0 +1,134 @@
+#创建文件夹
+mkdir -p /home/v/scripts
+
+#打开编辑器
+nano /home/v/scripts/system_monitor.sh
+
+#脚本
+#!/bin/bash
+# 系统资源监控脚本 system_monitor.sh
+# 适配Ubuntu22.04虚拟机，修复区域语言逗号、free取值不稳定问题
+
+# ====================== 全局配置区域 ======================
+CSV_FILE="/var/log/system_stats.csv"
+COLLECT_TIMES=6
+SLEEP_SEC=10
+ALERT_THRESHOLD=80
+
+cpu_data=()
+mem_data=()
+disk_data=()
+
+# ====================== 健壮性检查函数 ======================
+check_dependency(){
+    local need_cmd=("top" "free" "df" "bc" "awk" "date")
+    for cmd in ${need_cmd[@]}
+    do
+        if ! command -v ${cmd} >/dev/null 2>&1;then
+            echo "【错误】系统缺少命令：${cmd}，请先安装！"
+            exit 1
+        fi
+    done
+}
+
+check_log_dir(){
+    local log_dir=$(dirname ${CSV_FILE})
+    if [ ! -d ${log_dir} ];then
+        sudo mkdir -p ${log_dir}
+    fi
+}
+
+# ====================== 采集单次资源数据函数【修复版】 ======================
+collect_resource(){
+    timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+
+    # CPU：强制LC_ALL=C 英文环境，把逗号替换为小数点，根除syntax error
+    cpu_idle=$(LC_NUMERIC=C LC_ALL=C top -b -n 1 | awk '/Cpu\(s\)/{print $8}' | sed 's/,/./g')
+    cpu_usage=$(echo "scale=2; 100 - ${cpu_idle}" | bc)
+
+    # 内存：改用free的精确表达式，规避空值问题
+    mem_info=$(LC_ALL=C free)
+    mem_total=$(echo "${mem_info}" | awk '/Mem:/{print $2}')
+    mem_used=$(echo "${mem_info}" | awk '/Mem:/{print $3}')
+    mem_usage=$(echo "scale=2; ${mem_used} * 100 / ${mem_total}" | bc)
+
+    # 磁盘使用率（根分区）
+    disk_usage=$(LC_ALL=C df -P / | awk 'NR==2{print $5}' | sed 's/%//')
+
+    echo "${timestamp},${cpu_usage},${mem_usage},${disk_usage}"
+}
+
+# ====================== 统计平均值、最大值函数 ======================
+calculate_stats(){
+    local arr=("$@")
+    local sum=0
+    local max=0
+    for val in "${arr[@]}"
+    do
+        # 跳过空值，防止除零崩溃
+        if [[ -z "${val}" ]];then
+            continue
+        fi
+        sum=$(echo "scale=4; ${sum} + ${val}" | bc)
+        if (( $(echo "${val} > ${max}" | bc -l) ));then
+            max=${val}
+        fi
+    done
+    local avg=$(echo "scale=2; ${sum}/${#arr[@]}" | bc)
+    echo "${avg} ${max}"
+}
+
+# ====================== 脚本主流程 ======================
+check_dependency
+check_log_dir
+
+# CSV表头
+if [ ! -f "${CSV_FILE}" ];then
+    echo "时间戳,CPU%,内存%,磁盘%" > "${CSV_FILE}"
+fi
+
+echo "========== 开始采集资源数据，共${COLLECT_TIMES}次，间隔${SLEEP_SEC}秒 =========="
+for ((i=0; i<${COLLECT_TIMES}; i++))
+do
+    line=$(collect_resource)
+    echo "采集记录：${line}"
+    echo "${line}" >> "${CSV_FILE}"
+
+    cpu_val=$(echo ${line} | cut -d',' -f2)
+    mem_val=$(echo ${line} | cut -d',' -f3)
+    disk_val=$(echo ${line} | cut -d',' -f4)
+    cpu_data+=(${cpu_val})
+    mem_data+=(${mem_val})
+    disk_data+=(${disk_val})
+
+    if [ $i -lt $((COLLECT_TIMES - 1)) ];then
+        sleep ${SLEEP_SEC}
+    fi
+done
+echo "========== 全部数据采集完成 =========="
+
+read cpu_avg cpu_max <<< $(calculate_stats "${cpu_data[@]}")
+read mem_avg mem_max <<< $(calculate_stats "${mem_data[@]}")
+read disk_avg disk_max <<< $(calculate_stats "${disk_data[@]}")
+
+echo ""
+echo "===== 资源统计汇总 ====="
+echo "CPU使用率  平均：${cpu_avg}%  最高：${cpu_max}%"
+echo "内存使用率 平均：${mem_avg}%  最高：${mem_max}%"
+echo "磁盘使用率 平均：${disk_avg}%  最高：${disk_max}%"
+echo "========================"
+
+alert_flag=0
+if (( $(echo "${cpu_avg} > ${ALERT_THRESHOLD}" | bc -l) ));then alert_flag=1;fi
+if (( $(echo "${mem_avg} > ${ALERT_THRESHOLD}" | bc -l) ));then alert_flag=1;fi
+if (( $(echo "${disk_avg} > ${ALERT_THRESHOLD}" | bc -l) ));then alert_flag=1;fi
+
+if [ ${alert_flag} -eq 1 ];then
+    echo "ALERT: Resource usage exceeded threshold!"
+    exit 1
+else
+    exit 0
+fi
+
+#运行脚本
+/home/v/scripts/system_monitor.sh
