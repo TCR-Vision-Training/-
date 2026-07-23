@@ -1,0 +1,7 @@
+PATH="/usr/local/go/bin:/home/user/go/bin:$PATH"
+echo $PATH
+
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+env | grep "^PROXY"
+unset HTTP_PROXY
