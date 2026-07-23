@@ -1,0 +1,9 @@
+journalctl -u nginx --since "today" > /tmp/nginx_today.log
+
+journalctl -u ssh -f -p warning..emerg
+
+/var/log/syslog {
+    daily
+    rotate 7
+    compress
+}
