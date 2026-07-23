@@ -1,0 +1,7 @@
+sudo useradd -r -d /var/lib/deploy -s /bin/bash -g www-data deploy
+sudo passwd -e deploy
+
+sudo usermod -aG docker,sudo deploy
+
+w
+sudo pkill -kill -u testuser
