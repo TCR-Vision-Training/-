@@ -1,0 +1,7 @@
+echo "主机名: $(hostname) ; 内核版本: $(uname -r) ; 系统架构: $(uname -m) ; OS版本: $(cat /etc/os-release | grep VERSION_ID)"
+
+free -h
+nproc
+uptime
+
+uptime
