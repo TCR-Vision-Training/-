@@ -1,0 +1,3 @@
+tar -zcvf projects.tar.gz --exclude='.git' --exclude='*.tmp' -C /home/user projects
+mkdir -p /tmp/restore && tar -zxvf projects.tar.gz -C /tmp/restore
+cd /var/log && zip logs.zip archive/2026/*.log *.log -x */*
