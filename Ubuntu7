@@ -1,0 +1,6 @@
+df -hT
+du -h --max-depth=1 /home/user | sort -hr
+
+sudo mount -t ext4 /dev/sdb1 /mnt/data
+mkdir -p /mnt/data
+/dev/sdb1   /mnt/data   ext4    defaults  0  2
